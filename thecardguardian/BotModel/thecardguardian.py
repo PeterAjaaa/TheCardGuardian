@@ -10,5 +10,5 @@ class TheCardGuardian(discord.Bot):
         for channel in guild.text_channels:
             if channel.permissions_for(guild.me).send_messages:
                 await channel.send(
-                    "Thanks for inviting TheCardGuardian! Type `/magichelp` for Magic: The Gathering and `/ygoabout` for Yu-Gi-Oh! to get started."
+                    "Thanks for inviting TheCardGuardian! Type `/magichelp` for Magic: The Gathering and `/ygohelp` for Yu-Gi-Oh! to get started."
                 )
