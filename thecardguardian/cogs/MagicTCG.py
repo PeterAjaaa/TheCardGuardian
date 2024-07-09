@@ -4,8 +4,6 @@ import aiohttp
 import discord
 from discord.ext import commands, tasks
 
-# NOTE: YGOPRODeck requires us to download and re-host the images ourselves. Might as well do this for Scryfall API too.
-
 
 class MagicTCG(commands.Cog):
     daily_card_name = None
