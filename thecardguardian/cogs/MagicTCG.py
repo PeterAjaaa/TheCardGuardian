@@ -4,7 +4,6 @@ import aiohttp
 import discord
 from discord.ext import commands, tasks
 
-# TODO: Set up a database and cache the images (and maybe the responses?), so that we don't hit the limit rate of the API
 # NOTE: YGOPRODeck requires us to download and re-host the images ourselves. Might as well do this for Scryfall API too.
 
 
@@ -33,9 +32,15 @@ class MagicTCG(commands.Cog):
         Get a random card from the Scryfall API.
         This is a private method and should not be called outside of this class.
         """
+        cache = {}
+
         async with aiohttp.ClientSession() as session:
             async with session.get("https://api.scryfall.com/cards/random") as req:
                 if req.status == 200:
+                    if req.url not in cache:
+                        self.card = await req.json()
+                        cache[req.url] = self.card
+                    self.card = cache[req.url]
                     self.card = await req.json()
                     self.daily_card_name = self.card["name"]
                     self.daily_card_image_uri = self.card["image_uris"]["png"]
