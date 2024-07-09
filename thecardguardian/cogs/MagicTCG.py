@@ -2,6 +2,7 @@ import datetime
 
 import aiohttp
 import discord
+from discord.commands import Option
 from discord.ext import commands, tasks
 
 
@@ -16,7 +17,13 @@ class MagicTCG(commands.Cog):
     daily_card_minute = None
     first_run = True
 
+    named_card_name = None
+    named_card_image_uri = None
+    named_card_type = None
+    named_card_description = None
+
     DATE_FORMAT = "%d %B %Y"
+    EMBED_FOOTER = "TheCardGuardian\nTheCardGuardian is not affiliated with Scryfall or YGOPRODeck or Magic: The Gathering or Yu-Gi-Oh!\nAll rights goes to their respective owners."
 
     def __init__(self, bot):
         self.bot = bot
@@ -30,20 +37,71 @@ class MagicTCG(commands.Cog):
         Get a random card from the Scryfall API.
         This is a private method and should not be called outside of this class.
         """
-        cache = {}
-
         async with aiohttp.ClientSession() as session:
             async with session.get("https://api.scryfall.com/cards/random") as req:
                 if req.status == 200:
-                    if req.url not in cache:
-                        self.card = await req.json()
-                        cache[req.url] = self.card
-                    self.card = cache[req.url]
-                    self.card = await req.json()
-                    self.daily_card_name = self.card["name"]
-                    self.daily_card_image_uri = self.card["image_uris"]["png"]
-                    self.daily_card_type = self.card["type_line"]
-                    self.daily_card_description = self.card["oracle_text"]
+                    card = await req.json()
+                    self.daily_card_name = card["name"]
+                    self.daily_card_image_uri = card["image_uris"]["png"]
+                    self.daily_card_type = card["type_line"]
+                    self.daily_card_description = card["oracle_text"]
+
+    async def __get_named_magic_card(self, card_name):
+        """
+        Parameter: card_name: str
+        Return Type: None | str (on failure)
+        Description:
+        Get one or more searched cards from the Scryfall API.
+        This is a private method and should not be called outside of this class.
+        """
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"https://api.scryfall.com/cards/named?exact={card_name}"
+            ) as req:
+                if req.status == 200:
+                    card = await req.json()
+                    if "card_faces" not in card:
+                        self.named_card_name = card["name"]
+                        self.named_card_image_uri = card["image_uris"]["png"].split(
+                            "?"
+                        )[0]
+                        self.named_card_type = card["type_line"]
+                        self.named_card_description = card["oracle_text"]
+                    else:
+                        self.named_card_name = card["card_faces"][0]["name"]
+                        self.named_card_image_uri = card["card_faces"][0]["image_uris"][
+                            "png"
+                        ].split("?")[0]
+                        self.named_card_type = card["card_faces"][0]["type_line"]
+                        self.named_card_description = card["card_faces"][0][
+                            "oracle_text"
+                        ]
+                elif req.status == 404:
+                    async with session.get(
+                        f"https://api.scryfall.com/cards/named?fuzzy={card_name}"
+                    ) as req:
+                        if req.status == 200:
+                            card = await req.json()
+                            if "card_faces" not in card:
+                                self.named_card_name = card["name"]
+                                self.named_card_image_uri = card["image_uris"][
+                                    "png"
+                                ].split("?")[0]
+                                self.named_card_type = card["type_line"]
+                                self.named_card_description = card["oracle_text"]
+                            else:
+                                self.named_card_name = card["card_faces"][0]["name"]
+                                self.named_card_image_uri = card["card_faces"][0][
+                                    "image_uris"
+                                ]["png"].split("?")[0]
+                                self.named_card_type = card["card_faces"][0][
+                                    "type_line"
+                                ]
+                                self.named_card_description = card["card_faces"][0][
+                                    "oracle_text"
+                                ]
+                        elif req.status == 404:
+                            return "Not found"
 
     def __build_daily_embed(self):
         """
@@ -60,9 +118,7 @@ class MagicTCG(commands.Cog):
         )
         embed.add_field(name="", value=f"**{self.daily_card_description}**")
         embed.set_image(url=self.daily_card_image_uri)
-        embed.set_footer(
-            text="TheCardGuardian\nTheCardGuardian is not affiliated with Scryfall or YGOPRODeck or Magic: The Gathering or Yu-Gi-Oh!\nAll rights goes to their respective owners."
-        )
+        embed.set_footer(text=self.EMBED_FOOTER)
         return embed
 
     @tasks.loop(seconds=1)
@@ -172,13 +228,25 @@ class MagicTCG(commands.Cog):
         name="magicdailytime",
         description="Set the time at which the daily card should be sent, in 24 hour format (ex: 17:00)",
     )
-    async def daily_time(self, ctx: discord.ApplicationContext, time: str):
+    async def daily_time(
+        self,
+        ctx: discord.ApplicationContext,
+        time: str = Option(
+            description="24 hour format (ex: 17:00), use 00:00 for midnight"
+        ),
+    ):
         """
         Parameter: discord.ApplicationContext
         Return Type: None
         Description:
         Set the time at which the daily card should be sent, in 24 hour format (ex: 17:00).
         """
+        if self.daily_card_channel_id is None:
+            await ctx.respond(
+                "No channel is set to receive daily cards. Please set one first using `/magicdailyset`."
+            )
+            return
+
         time_split = time.split(":")
 
         if len(time_split) != 2:
@@ -242,6 +310,41 @@ class MagicTCG(commands.Cog):
             """,
         )
         await ctx.respond(embed=embed)
+
+    @discord.slash_command(
+        name="magicnamedsearch",
+        description="Search for named Magic cards (supports exact and fuzzy search)",
+    )
+    async def named_search(
+        self,
+        ctx: discord.ApplicationContext,
+        query: str = Option(
+            description="Enter the name of the Magic card you're searching for"
+        ),
+    ):
+        """
+        Parameter: discord.ApplicationContext
+        Return Type: None
+        Description:
+        Search for named Magic cards.
+        """
+        status = await self.__get_named_magic_card(query)
+
+        embed = discord.Embed(
+            title=self.named_card_name,
+            description=f"**{self.named_card_type}**",
+            color=discord.Color.blurple(),
+        )
+        embed.add_field(name="", value=f"**{self.named_card_description}**")
+        embed.set_image(url=self.named_card_image_uri)
+        embed.set_footer(text=self.EMBED_FOOTER)
+
+        if status is not None:
+            await ctx.respond(f"Query `{query}` is not found.")
+        else:
+            await ctx.respond(
+                f"Returning `{self.named_card_name}` for query `{query}`", embed=embed
+            )
 
 
 def setup(bot):
