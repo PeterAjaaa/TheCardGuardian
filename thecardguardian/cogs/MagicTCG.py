@@ -13,6 +13,7 @@ class MagicTCG(commands.Cog):
     daily_card_image_uri = None
     daily_card_type = None
     daily_card_description = None
+    daily_card_prices_usd = None
 
     daily_card_channel_id = None
     daily_card_hour = None
@@ -26,7 +27,7 @@ class MagicTCG(commands.Cog):
         self.bot = bot
         self.send_daily_magic_card.start()
 
-    async def __get_random_magic_card(self):
+    async def __get_and_set_random_magic_card(self):
         """
         Parameter: None
         Return Type: None
@@ -42,6 +43,7 @@ class MagicTCG(commands.Cog):
                     self.daily_card_image_uri = card["image_uris"]["png"]
                     self.daily_card_type = card["type_line"]
                     self.daily_card_description = card["oracle_text"]
+                    self.daily_card_prices_usd = card["prices"]["usd"]
 
     async def __get_named_magic_card(self, card_name):
         """
@@ -95,13 +97,80 @@ class MagicTCG(commands.Cog):
         Build an embed with the card information.
         This is a private method and should not be called outside of this class.
         """
+        if self.daily_card_prices_usd is None:
+            self.daily_card_prices_usd = 0
+
         embed = discord.Embed(
             title=self.daily_card_name,
             description=f"**{self.daily_card_type}**",
             color=discord.Color.blurple(),
         )
-        embed.add_field(name="", value=f"**{self.daily_card_description}**")
+        embed.add_field(
+            name=f"Price (USD): {self.daily_card_prices_usd}$",
+            value=f"**{self.daily_card_description}**",
+        )
         embed.set_image(url=self.daily_card_image_uri)
+        embed.set_footer(text=self.EMBED_FOOTER)
+        return embed
+
+    def __build_double_faced_card_embed(self, card):
+        """
+        Parameter: card: dict
+        Return Type: dict {"front": discord.Embed, "back": discord.Embed}
+        Description:
+        Build an embed with the double-faced card information.
+        This is a private method and should not be called outside of this class.
+        """
+        price = card["prices"]["usd"]
+        if price is None:
+            price = 0
+
+        embed = discord.Embed(
+            title=f"{card["card_faces"][0]["name"]} [1ST CARD FACE]",
+            description=f"{card["card_faces"][0]["type_line"]}",
+            color=discord.Color.blurple(),
+        )
+        embed.add_field(
+            name=f"Price (USD): {price}$",
+            value=f"**{card["card_faces"][0]["oracle_text"]}**",
+        )
+        embed.set_footer(text=self.EMBED_FOOTER)
+
+        embed_alt = discord.Embed(
+            title=f"{card["card_faces"][1]["name"]} [2ND CARD FACE]",
+            description=f"{card["card_faces"][1]["type_line"]}",
+            color=discord.Color.blurple(),
+        )
+        embed_alt.add_field(
+            name=f"Price (USD): {price}$",
+            value=f"**{card["card_faces"][1]["oracle_text"]}**",
+        )
+        embed_alt.set_footer(text=self.EMBED_FOOTER)
+        return {"front": embed, "back": embed_alt}
+
+    def __build_single_faced_card_embed(self, card):
+        """
+        Parameter: card: dict
+        Return Type: discord.Embed
+        Description:
+        Build an embed with the single-faced card information.
+        This is a private method and should not be called outside of this class.
+        """
+        price = card["prices"]["usd"]
+        if price is None:
+            price = 0
+
+        embed = discord.Embed(
+            title=f"{card["name"]}",
+            description=f"{card["type_line"]}",
+            color=discord.Color.blurple(),
+        )
+        embed.add_field(
+            name=f"Price (USD): {price}$",
+            value=f"**{card["oracle_text"]}**",
+            inline=True,
+        )
+        embed.set_image(url=card["image_uris"]["png"])
         embed.set_footer(text=self.EMBED_FOOTER)
         return embed
 
@@ -122,14 +191,13 @@ class MagicTCG(commands.Cog):
             target_time = datetime.time(
                 hour=self.daily_card_hour, minute=self.daily_card_minute, second=0
             )
-            print(now, target_time)
             if (
                 now.hour == target_time.hour
                 and now.minute == target_time.minute
                 and now.second == target_time.second
             ):
                 channel = self.bot.get_channel(self.daily_card_channel_id)
-                await self.__get_random_magic_card()
+                await self.__get_and_set_random_magic_card()
                 await channel.send(
                     f"Daily Card Of The Day! {datetime.date.today().strftime(self.DATE_FORMAT)}",
                     embed=self.__build_daily_embed(),
@@ -150,7 +218,7 @@ class MagicTCG(commands.Cog):
         If it's the first run, it acts both as a getter and a setter both at the same time.
         """
         if self.first_run is True:
-            await self.__get_random_magic_card()
+            await self.__get_and_set_random_magic_card()
             self.first_run = False
 
         await ctx.respond(
@@ -317,51 +385,21 @@ class MagicTCG(commands.Cog):
             await ctx.respond(f"Query `{query}` is not found.")
             return
         else:
-            await ctx.respond(f"Returning result for query `{query}`")
+            await ctx.respond(f"Returning named search result for query `{query}`")
             if "card_faces" in card:
-                embed = discord.Embed(
-                    title=f"{card["card_faces"][0]["name"]} [1ST CARD FACE]",
-                    description=f"{card["card_faces"][0]["type_line"]}",
-                    color=discord.Color.blurple(),
-                )
-                embed.add_field(
-                    name="",
-                    value=f"**{card["card_faces"][0]["oracle_text"]}**",
-                )
-                embed.set_footer(text=self.EMBED_FOOTER)
-
-                embed_alt = discord.Embed(
-                    title=f"{card["card_faces"][1]["name"]} [2ND CARD FACE]",
-                    description=f"{card["card_faces"][1]["type_line"]}",
-                    color=discord.Color.blurple(),
-                )
-                embed_alt.add_field(
-                    name="",
-                    value=f"**{card["card_faces"][1]["oracle_text"]}**",
-                )
-                embed_alt.set_footer(text=self.EMBED_FOOTER)
+                double_faced_card_embed = self.__build_double_faced_card_embed(card)
+                front_face = double_faced_card_embed["front"]
+                back_face = double_faced_card_embed["back"]
                 if card["layout"] == "adventure":
-                    embed.set_image(url=card["image_uris"]["png"])
-                    embed_alt.set_image(url=card["image_uris"]["png"])
+                    front_face.set_image(url=card["image_uris"]["png"])
+                    back_face.set_image(url=card["image_uris"]["png"])
                 else:
-                    embed.set_image(url=card["card_faces"][0]["image_uris"]["png"])
-                    embed_alt.set_image(url=card["card_faces"][1]["image_uris"]["png"])
-                embeds.append(embed)
-                embeds.append(embed_alt)
+                    front_face.set_image(url=card["card_faces"][0]["image_uris"]["png"])
+                    back_face.set_image(url=card["card_faces"][1]["image_uris"]["png"])
+                embeds.append(front_face)
+                embeds.append(back_face)
             else:
-                embed = discord.Embed(
-                    title=f"{card["name"]}",
-                    description=f"{card["type_line"]}",
-                    color=discord.Color.blurple(),
-                )
-                embed.add_field(
-                    name="",
-                    value=f"**{card["oracle_text"]}**",
-                    inline=True,
-                )
-                embed.set_image(url=card["image_uris"]["png"])
-                embed.set_footer(text=self.EMBED_FOOTER)
-                embeds.append(embed)
+                embeds.append(self.__build_single_faced_card_embed(card))
 
         paginator = Paginator(pages=embeds)
         await paginator.respond(ctx.interaction, ephemeral=True)
@@ -390,54 +428,26 @@ class MagicTCG(commands.Cog):
             await ctx.respond(f"Query `{query}` is not found.")
             return
         else:
+            await ctx.respond(f"Returning query search result for query `{query}`")
             for card in data:
                 if "card_faces" in card:
-                    embed = discord.Embed(
-                        title=f"{card["card_faces"][0]["name"]} [1ST CARD FACE]",
-                        description=f"{card["card_faces"][0]["type_line"]}",
-                        color=discord.Color.blurple(),
-                    )
-                    embed.add_field(
-                        name="",
-                        value=f"**{card["card_faces"][0]["oracle_text"]}**",
-                    )
-                    embed.set_footer(text=self.EMBED_FOOTER)
-
-                    embed_alt = discord.Embed(
-                        title=f"{card["card_faces"][1]["name"]} [2ND CARD FACE]",
-                        description=f"{card["card_faces"][1]["type_line"]}",
-                        color=discord.Color.blurple(),
-                    )
-                    embed_alt.add_field(
-                        name="",
-                        value=f"**{card["card_faces"][1]["oracle_text"]}**",
-                    )
-                    embed_alt.set_footer(text=self.EMBED_FOOTER)
-
+                    double_faced_card_embed = self.__build_double_faced_card_embed(card)
+                    front_face = double_faced_card_embed["front"]
+                    back_face = double_faced_card_embed["back"]
                     if card["layout"] == "adventure":
-                        embed.set_image(url=card["image_uris"]["png"])
-                        embed_alt.set_image(url=card["image_uris"]["png"])
+                        front_face.set_image(url=card["image_uris"]["png"])
+                        back_face.set_image(url=card["image_uris"]["png"])
                     else:
-                        embed.set_image(url=card["card_faces"][0]["image_uris"]["png"])
-                        embed_alt.set_image(
+                        front_face.set_image(
+                            url=card["card_faces"][0]["image_uris"]["png"]
+                        )
+                        back_face.set_image(
                             url=card["card_faces"][1]["image_uris"]["png"]
                         )
-                    embeds.append(embed)
-                    embeds.append(embed_alt)
+                    embeds.append(front_face)
+                    embeds.append(back_face)
                 else:
-                    embed = discord.Embed(
-                        title=f"{card["name"]}",
-                        description=f"{card["type_line"]}",
-                        color=discord.Color.blurple(),
-                    )
-                    embed.add_field(
-                        name="",
-                        value=f"**{card["oracle_text"]}**",
-                        inline=True,
-                    )
-                    embed.set_image(url=card["image_uris"]["png"])
-                    embed.set_footer(text=self.EMBED_FOOTER)
-                    embeds.append(embed)
+                    embeds.append(self.__build_single_faced_card_embed(card))
             paginator = Paginator(pages=embeds)
             await paginator.respond(ctx.interaction, ephemeral=True)
 
