@@ -84,7 +84,8 @@ class MagicTCG(commands.Cog):
             f"https://api.scryfall.com/cards/search?q={query_safe_card_name}",
         ) as req:
             if req.status == self.REQ_SUCCESS:
-                return await req.json()["data"]
+                card = await req.json()
+                return card["data"]
 
             return None
 
@@ -172,7 +173,7 @@ class MagicTCG(commands.Cog):
             and self.daily_card_minute is not None
             and self.daily_card_channel_id is not None
         ):
-            now = datetime.datetime.now(tz=datetime.UTC).time()
+            now = datetime.datetime.now().time()  # noqa: DTZ005
             target_time = datetime.time(
                 hour=self.daily_card_hour,
                 minute=self.daily_card_minute,
@@ -186,7 +187,7 @@ class MagicTCG(commands.Cog):
                 channel = self.bot.get_channel(self.daily_card_channel_id)
                 await self.__get_and_set_random_magic_card()
                 await channel.send(
-                    f"Daily Card Of The Day! {datetime.date.now(tz=datetime.UTC).strftime(self.DATE_FORMAT)}",  # noqa: E501
+                    f"Daily Card Of The Day! {datetime.datetime.now().strftime(self.DATE_FORMAT)}",  # noqa: DTZ005, E501
                     embed=self.__build_daily_embed(),
                 )
                 self.first_run = False
@@ -206,7 +207,7 @@ class MagicTCG(commands.Cog):
             self.first_run = False
 
         await ctx.respond(
-            f"Daily Card Of The Day! {datetime.date.now(tz=datetime.UTC).strftime(self.DATE_FORMAT)}",  # noqa: E501
+            f"Daily Card Of The Day! {datetime.date.today().strftime(self.DATE_FORMAT)}",  # noqa: DTZ011, E501
             embed=self.__build_daily_embed(),
         )
 
