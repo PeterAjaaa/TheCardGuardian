@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 bot = TheCardGuardian()
-bot.load_extension("cogs.MagicTCG")
-bot.load_extension("cogs.TheCardGuardianInfo")
+bot.load_extension("cogs.magic_tcg")
+bot.load_extension("cogs.thecardguardian_info")
 
 bot.run(os.getenv("TOKEN"))
