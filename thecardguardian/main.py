@@ -1,3 +1,5 @@
+"""Main calling code for running TheCardGuardian."""
+
 import os
 
 from BotModel.thecardguardian import TheCardGuardian

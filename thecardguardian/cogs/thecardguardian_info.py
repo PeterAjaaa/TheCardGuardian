@@ -1,19 +1,18 @@
+"""TheCardGuardian Info Cog."""
+
 import discord
 from discord.ext import commands
 
 
 class TheCardGuardianInfo(commands.Cog):
+    """TheCardGuardian Info Cog."""
+
     @discord.slash_command(
         name="about",
         description="About TheCardGuardian",
     )
-    async def about(self, ctx: discord.ApplicationContext):
-        """
-        Parameter: discord.ApplicationContext
-        Return Type: None
-        Description:
-        Send a message with information about the bot.
-        """
+    async def about(self, ctx: discord.ApplicationContext) -> None:
+        """Send a message with information about the bot."""
         embed = discord.Embed(
             title="About TheCardGuardian",
             color=discord.Color.blurple(),
@@ -31,10 +30,11 @@ class TheCardGuardianInfo(commands.Cog):
 
             **Source Code**
             [GitHub](https://github.com/PeterAjaaa/TheCardGuardian)
-            """,
+            """,  # noqa: E501
         )
         await ctx.respond(embed=embed)
 
 
-def setup(bot):
+def setup(bot: discord.Bot) -> None:
+    """Set up the TheCardGuardianInfo cog."""
     bot.add_cog(TheCardGuardianInfo(bot))

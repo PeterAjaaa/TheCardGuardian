@@ -1,0 +1,1 @@
+"""TheCardGuardian Bot Model."""
