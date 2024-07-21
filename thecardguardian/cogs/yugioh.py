@@ -34,6 +34,7 @@ class Yugioh(commands.Cog):
     def __init__(self, bot: discord.Bot) -> None:
         """Initialize the Yugioh cog."""
         self.bot = bot
+        self.send_daily_yugioh_card.start()
 
     async def __get_and_set_random_yugioh_card(self) -> None:
         """Get a random card from the YGOPRODECK API.
