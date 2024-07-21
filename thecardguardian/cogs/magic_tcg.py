@@ -255,7 +255,7 @@ class MagicTCG(commands.Cog):
 
     @discord.slash_command(
         name="magicdailytime",
-        description="Set the time at which the daily Magic: The Gathering card should be sent, in 24 hour format (ex: 17:00)",  # noqa: E501
+        description="Set the time at which the daily Magic: The Gathering card should be sent, in 24-H format (i.e 17:00)",  # noqa: E501
     )
     async def daily_time(
         self,
