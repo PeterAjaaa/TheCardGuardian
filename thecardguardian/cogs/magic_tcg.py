@@ -167,7 +167,7 @@ class MagicTCG(commands.Cog):
 
     @tasks.loop(seconds=1)
     async def send_daily_magic_card(self) -> None:
-        """Send the daily card of the day to the channel."""
+        """Send the daily Magic: The Gathering card of the day to the channel."""
         if (
             self.daily_card_hour is not None
             and self.daily_card_minute is not None
@@ -194,10 +194,10 @@ class MagicTCG(commands.Cog):
 
     @discord.slash_command(
         name="magicdailycard",
-        description="Get the daily Magic card of the day",
+        description="Get the daily Magic: The Gathering card of the day",
     )
     async def get_daily_magic_card(self, ctx: discord.ApplicationContext) -> None:
-        """Get the daily card of the day.
+        """Get the daily Magic: The Gathering card of the day.
 
         The condition basically checks whether the daily card has been sent before.
         If it's the first run, it acts both as getter and setter both at the same time
@@ -207,53 +207,55 @@ class MagicTCG(commands.Cog):
             self.first_run = False
 
         await ctx.respond(
-            f"Daily Card Of The Day! {datetime.date.today().strftime(self.DATE_FORMAT)}",  # noqa: DTZ011, E501
+            f"Daily Magic: The Gathering Card Of The Day! {datetime.date.today().strftime(self.DATE_FORMAT)}",  # noqa: DTZ011, E501
             embed=self.__build_daily_embed(),
         )
 
     @discord.slash_command(
         name="magicdailyset",
-        description="Set this channel to receive TheCardGuardian's card of the day updates",  # noqa: E501
+        description="Set this channel to receive TheCardGuardian's Magic: The Gathering card of the day updates",  # noqa: E501
     )
     async def daily_set(self, ctx: discord.ApplicationContext) -> None:
-        """Set this channel to receive TheCardGuardian's card of the day updates."""
+        """Set this channel to receive TheCardGuardian's Magic: The Gathering card of the day updates."""  # noqa: E501
         if self.daily_card_channel_id == ctx.channel_id:
             await ctx.respond(
-                f"This channel is already set to receive daily Magic cards everyday at {self.daily_card_hour}:{self.daily_card_minute}.",  # noqa: E501
+                f"This channel is already set to receive daily Magic: The Gathering cards everyday at {self.daily_card_hour}:{self.daily_card_minute}.",  # noqa: E501
             )
             return
 
         if self.daily_card_channel_id is not None:
             await ctx.respond(
-                "Another channel is already set to receive daily cards. Please unset that first.",  # noqa: E501
+                "Another channel is already set to receive daily Magic: The Gathering cards. Please unset that first.",  # noqa: E501
             )
 
         self.daily_card_channel_id = ctx.channel_id
         await ctx.respond(
-            "Daily card set to this channel! Type `/magicdailytime` to set the time for the daily card to be sent.",  # noqa: E501
+            "Daily Magic: The Gathering card set to this channel! Type `/magicdailytime` to set the time for the daily Magic: The Gathering card to be sent.",  # noqa: E501
         )
 
     @discord.slash_command(
         name="magicdailyunset",
-        description="Unset this channel to receive TheCardGuardian's card of the day updates",  # noqa: E501
+        description="Unset this channel to receive TheCardGuardian's Magic: The Gathering card of the day updates",  # noqa: E501
     )
     async def daily_unset(self, ctx: discord.ApplicationContext) -> None:
-        """Unset this channel as the receiver for TheCardGuardian's daily card of the day updates."""  # noqa: E501
+        """Unset this channel as the receiver for TheCardGuardian's daily Magic: The Gathering card of the day updates."""  # noqa: E501
         if (
             self.daily_card_channel_id != ctx.channel_id
             or self.daily_card_channel_id is None
         ):
-            await ctx.respond("This channel is not set to receive daily cards.")
+            await ctx.respond(
+                "This channel is not set to receive daily Magic: The Gathering cards.",
+            )
             return
 
         self.daily_card_channel_id = None
         await ctx.respond(
-            "Daily card unset! Type `/magicdailyset` to set this channel to receive the daily card of the day.",  # noqa: E501
+            "Daily Magic: The Gathering card unset! Type `/magicdailyset` to set this channel to receive the daily Magic: The Gathering card of the day.",  # noqa: E501
         )
 
     @discord.slash_command(
         name="magicdailytime",
-        description="Set the time at which the daily card should be sent, in 24 hour format (ex: 17:00)",  # noqa: E501
+        description="Set the time at which the daily Magic: The Gathering card should be sent, in 24 hour format (ex: 17:00)",  # noqa: E501
     )
     async def daily_time(
         self,
@@ -263,7 +265,7 @@ class MagicTCG(commands.Cog):
         """Set the time at which the daily card should be sent, in 24 hour format (ex: 17:00)."""  # noqa: E501
         if self.daily_card_channel_id is None:
             await ctx.respond(
-                "No channel is set to receive daily cards. Please set one first using `/magicdailyset`.",  # noqa: E501
+                "No channel is set to receive daily Magic: The Gathering cards. Please set one first using `/magicdailyset`.",  # noqa: E501
             )
             return
 
@@ -302,10 +304,10 @@ class MagicTCG(commands.Cog):
 
     @discord.slash_command(
         name="magichelp",
-        description="Get help with TheCardGuardian Magic commands",
+        description="Get help with TheCardGuardian Magic: The Gathering commands",
     )
     async def help(self, ctx: discord.ApplicationContext) -> None:
-        """Get help with TheCardGuardian Magic commands."""
+        """Get help with TheCardGuardian Magic: The Gathering commands."""
         embed = discord.Embed(
             title="Help with TheCardGuardian",
             color=discord.Color.blurple(),
@@ -320,7 +322,7 @@ class MagicTCG(commands.Cog):
 
             3. Set the time at which the daily card should be sent, in 24 hour format (ex: 17:00), using `/magicdailytime`.
 
-            4. Type `/magicdailycard` to receive the daily card of the day, and `/about` to get more information about TheCardGuardian.
+            4. Type `/magicdailycard` to receive the daily Magic: The Gathering card of the day, and `/about` to get more information about TheCardGuardian.
 
             5. Enjoy!
             """,  # noqa: E501
@@ -329,17 +331,17 @@ class MagicTCG(commands.Cog):
 
     @discord.slash_command(
         name="magicnamedsearch",
-        description="Search for named Magic cards (supports exact and fuzzy search)",
+        description="Search for named Magic: The Gathering cards (supports exact and fuzzy search)",  # noqa: E501
     )
     async def named_search(
         self,
         ctx: discord.ApplicationContext,
         query: str = Option(
             str,
-            "Enter the name of the Magic card you're searching for",
+            "Enter the name of the Magic: The Gathering card you're searching for",
         ),
     ) -> None:
-        """Search for named Magic cards."""
+        """Search for named Magic: The Gathering cards."""
         card = await self.__get_named_magic_card(query)
         embeds = []
 
@@ -368,17 +370,17 @@ class MagicTCG(commands.Cog):
 
     @discord.slash_command(
         name="magicquerysearch",
-        description="Search for Magic cards by query (supports multiple results)",
+        description="Search for Magic: The Gathering cards by query (supports multiple results)",  # noqa: E501
     )
     async def query_search(
         self,
         ctx: discord.ApplicationContext,
         query: str = Option(
             str,
-            "Enter the name of the Magic card you're searching for",
+            "Enter the name of the Magic: The Gathering card you're searching for",
         ),
     ) -> None:
-        """Search for Magic cards by query."""
+        """Search for Magic: The Gathering cards by query."""
         data = await self.__get_queried_magic_card(query)
         embeds = []
 
