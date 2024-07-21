@@ -187,7 +187,7 @@ class MagicTCG(commands.Cog):
                 channel = self.bot.get_channel(self.daily_card_channel_id)
                 await self.__get_and_set_random_magic_card()
                 await channel.send(
-                    f"Daily Card Of The Day! {datetime.datetime.now().strftime(self.DATE_FORMAT)}",  # noqa: DTZ005, E501
+                    f"Magic: The Gathering Daily Card Of The Day! {datetime.datetime.now().strftime(self.DATE_FORMAT)}",  # noqa: DTZ005, E501
                     embed=self.__build_daily_embed(),
                 )
                 self.first_run = False
