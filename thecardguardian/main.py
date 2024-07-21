@@ -9,5 +9,6 @@ load_dotenv()
 bot = TheCardGuardian()
 bot.load_extension("cogs.magic_tcg")
 bot.load_extension("cogs.thecardguardian_info")
+bot.load_extension("cogs.yugioh")
 
 bot.run(os.getenv("TOKEN"))
