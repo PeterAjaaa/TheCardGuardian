@@ -1,11 +1,14 @@
 """TheCardGuardian Yugioh Cog."""
 
+from __future__ import annotations
+
 import datetime
 
 import aiohttp
 import discord
 from discord.commands import Option
 from discord.ext import commands, tasks
+from discord.ext.pages import Paginator
 
 
 class Yugioh(commands.Cog):
@@ -70,6 +73,48 @@ class Yugioh(commands.Cog):
             value=f"**{self.daily_card_description}**",
         )
         embed.set_image(url=self.daily_card_image_uri)
+        embed.set_footer(text=self.EMBED_FOOTER)
+        return embed
+
+    async def __get_named_yugioh_card(self, card_name: str) -> dict | None:
+        """Get one or more searched named cards from the YGOPRODECK API.
+
+        This is a private method and should not be called outside of this class.
+        """
+        async with aiohttp.ClientSession() as session, session.get(
+            f"https://db.ygoprodeck.com/api/v7/cardinfo.php?name={card_name}",
+        ) as req_exact:
+            if req_exact.status == self.REQ_SUCCESS:
+                return await req_exact.json()
+
+            async with session.get(
+                f"https://db.ygoprodeck.com/api/v7/cardinfo.php?fname={card_name}",
+            ) as req_fuzzy:
+                if req_fuzzy.status == self.REQ_SUCCESS:
+                    return await req_fuzzy.json()
+
+                return None
+
+    def __build_card_embed(self, card: dict) -> discord.Embed:
+        """Build a single card embed with the related card information.
+
+        This is a private method and should not be called outside of this class.
+        """
+        price = card["data"][0]["card_prices"][0]["tcgplayer_price"]
+        if price is None:
+            price = 0
+
+        embed = discord.Embed(
+            title=f"{card["data"][0]["name"]}",
+            description=f"{card["data"][0]["type"]}",
+            color=discord.Color.blurple(),
+        )
+        embed.add_field(
+            name=f"Price (USD): {price}$",
+            value=f"**{card["data"][0]["desc"]}**",
+            inline=True,
+        )
+        embed.set_image(url=card["data"][0]["card_images"][0]["image_url"])
         embed.set_footer(text=self.EMBED_FOOTER)
         return embed
 
@@ -212,6 +257,59 @@ class Yugioh(commands.Cog):
             + ":"
             + str(time_split[1]),
         )
+
+    @discord.slash_command(
+        name="yugiohhelp",
+        description="Get help with TheCardGuardian Yu-Gi-Oh! commands",
+    )
+    async def help(self, ctx: discord.ApplicationContext) -> None:
+        """Get help with TheCardGuardian Yu-Gi-Oh! commands."""
+        embed = discord.Embed(
+            title="Help with TheCardGuardian",
+            color=discord.Color.blurple(),
+        )
+        embed.add_field(
+            name="",
+            value="""
+            To get started with TheCardGuardian, follow the first-time setup instructions listed below:
+            1. Create a new channel (or use existing ones!) to receive TheCardGuardian's daily card of the day updates.
+
+            2. Set the channel as the receiver for TheCardGuardian's daily card of the day updates, using `/yugiohdailyset`.
+
+            3. Set the time at which the daily card should be sent, in 24 hour format (ex: 17:00), using `/yugiohdailytime`.
+
+            4. Type `/yugiohdailycard` to receive the daily Magic: The Gathering card of the day, and `/about` to get more information about TheCardGuardian.
+
+            5. Enjoy!
+            """,  # noqa: E501
+        )
+        await ctx.respond(embed=embed)
+
+    @discord.slash_command(
+        name="yugiohnamedsearch",
+        description="Search for named Yu-Gi-Oh! cards (supports exact and fuzzy search)",  # noqa: E501
+    )
+    async def named_search(
+        self,
+        ctx: discord.ApplicationContext,
+        query: str = Option(
+            str,
+            "Enter the name of the Yu-Gi-Oh! card you're searching for",
+        ),
+    ) -> None:
+        """Search for named Yu-Gi-Oh! cards."""
+        card = await self.__get_named_yugioh_card(query)
+        embeds = []
+
+        if card is None:
+            await ctx.respond(f"Query `{query}` is not found.")
+            return
+
+        await ctx.respond(f"Returning named search result for query `{query}`")
+        embeds.append(self.__build_card_embed(card))
+
+        paginator = Paginator(pages=embeds)
+        await paginator.respond(ctx.interaction, ephemeral=True)
 
 
 def setup(bot: discord.Bot) -> None:
