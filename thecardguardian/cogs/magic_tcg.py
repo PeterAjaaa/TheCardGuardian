@@ -54,6 +54,7 @@ class MagicTCG(commands.Cog):
                 self.daily_card_type = card["type_line"]
                 self.daily_card_description = card["oracle_text"]
                 self.daily_card_prices_usd = card["prices"]["usd"]
+                self.daily_card_prices_tix = card["prices"]["tix"]
 
     async def __get_named_magic_card(self, card_name: str) -> dict | None:
         """Get one or more searched named cards from the Scryfall API.
@@ -103,7 +104,7 @@ class MagicTCG(commands.Cog):
             color=discord.Color.blurple(),
         )
         embed.add_field(
-            name=f"Price (USD): {self.daily_card_prices_usd}$",
+            name=f"Price (USD): {self.daily_card_prices_usd}$\nPrice (TIX): {self.daily_card_prices_tix} TIX",  # noqa: E501
             value=f"**{self.daily_card_description}**",
         )
         embed.set_image(url=self.daily_card_image_uri)
@@ -116,8 +117,13 @@ class MagicTCG(commands.Cog):
         This is a private method and should not be called outside of this class.
         """
         price = card["prices"]["usd"]
+        tix = card["prices"]["tix"]
+
         if price is None:
             price = 0
+
+        if tix is None:
+            tix = 0
 
         embed = discord.Embed(
             title=f"{card["card_faces"][0]["name"]} [1ST CARD FACE]",
@@ -125,7 +131,7 @@ class MagicTCG(commands.Cog):
             color=discord.Color.blurple(),
         )
         embed.add_field(
-            name=f"Price (USD): {price}$",
+            name=f"Price (USD): {price}$\nPrice (TIX): {tix} TIX",
             value=f"**{card["card_faces"][0]["oracle_text"]}**",
         )
         embed.set_footer(text=self.EMBED_FOOTER)
@@ -136,7 +142,7 @@ class MagicTCG(commands.Cog):
             color=discord.Color.blurple(),
         )
         embed_alt.add_field(
-            name=f"Price (USD): {price}$",
+            name=f"Price (USD): {price}$\nPrice (TIX): {tix} TIX",
             value=f"**{card["card_faces"][1]["oracle_text"]}**",
         )
         embed_alt.set_footer(text=self.EMBED_FOOTER)
@@ -148,8 +154,13 @@ class MagicTCG(commands.Cog):
         This is a private method and should not be called outside of this class.
         """
         price = card["prices"]["usd"]
+        tix = card["prices"]["tix"]
+
         if price is None:
             price = 0
+
+        if tix is None:
+            tix = 0
 
         embed = discord.Embed(
             title=f"{card["name"]}",
@@ -157,7 +168,7 @@ class MagicTCG(commands.Cog):
             color=discord.Color.blurple(),
         )
         embed.add_field(
-            name=f"Price (USD): {price}$",
+            name=f"Price (USD): {price}$\nPrice (TIX): {tix} TIX",
             value=f"**{card["oracle_text"]}**",
             inline=True,
         )
