@@ -49,11 +49,15 @@ class Yugioh(commands.Cog):
         ) as req:
             if req.status == self.REQ_SUCCESS:
                 card = await req.json()
-                self.daily_card_name = card["name"]
-                self.daily_card_image_uri = card["card_images"][0]["image_url"]
-                self.daily_card_type = card["type"]
-                self.daily_card_description = card["desc"]
-                self.daily_card_prices_usd = card["card_prices"][0]["tcgplayer_price"]
+                self.daily_card_name = card["data"][0]["name"]
+                self.daily_card_image_uri = card["data"][0]["card_images"][0][
+                    "image_url"
+                ]
+                self.daily_card_type = card["data"][0]["type"]
+                self.daily_card_description = card["data"][0]["desc"]
+                self.daily_card_prices_usd = card["data"][0]["card_prices"][0][
+                    "tcgplayer_price"
+                ]
 
     def __build_daily_embed(self) -> None:
         """Build an embed with the card information.
@@ -95,26 +99,46 @@ class Yugioh(commands.Cog):
 
                 return None
 
-    def __build_card_embed(self, card: dict) -> discord.Embed:
-        """Build a single card embed with the related card information.
+    async def __get_queried_yugioh_card(self, card_name: str) -> dict | None:
+        """Get one or more searched named cards from the YGOPRODECK API.
 
         This is a private method and should not be called outside of this class.
         """
-        price = card["data"][0]["card_prices"][0]["tcgplayer_price"]
+        async with aiohttp.ClientSession() as session, session.get(
+            f"https://db.ygoprodeck.com/api/v7/cardinfo.php?fname={card_name}",
+        ) as req:
+            if req.status == self.REQ_SUCCESS:
+                return await req.json()
+
+            return None
+
+    def __build_card_embed(
+        self,
+        card: dict,
+        data_number: int = 0,
+    ) -> discord.Embed:
+        """Build card embed with the related card information.
+
+        This is a private method and should not be called outside of this class.
+        """
+        price = card["data"][data_number]["card_prices"][0]["tcgplayer_price"]
+
         if price is None:
             price = 0
 
         embed = discord.Embed(
-            title=f"{card["data"][0]["name"]}",
-            description=f"{card["data"][0]["type"]}",
+            title=f"{card["data"][data_number]["name"]}",
+            description=f"{card["data"][data_number]["type"]}",
             color=discord.Color.blurple(),
         )
         embed.add_field(
             name=f"Price (USD): {price}$",
-            value=f"**{card["data"][0]["desc"]}**",
+            value=f"**{card["data"][data_number]["desc"]}**",
             inline=True,
         )
-        embed.set_image(url=card["data"][0]["card_images"][0]["image_url"])
+        embed.set_image(
+            url=card["data"][data_number]["card_images"][0]["image_url"],
+        )
         embed.set_footer(text=self.EMBED_FOOTER)
         return embed
 
@@ -307,6 +331,33 @@ class Yugioh(commands.Cog):
 
         await ctx.respond(f"Returning named search result for query `{query}`")
         embeds.append(self.__build_card_embed(card))
+
+        paginator = Paginator(pages=embeds)
+        await paginator.respond(ctx.interaction, ephemeral=True)
+
+    @discord.slash_command(
+        name="yugiohquerysearch",
+        description="Search for Yu-Gi-Oh! cards by query (supports exact and fuzzy search)",  # noqa: E501
+    )
+    async def query_search(
+        self,
+        ctx: discord.ApplicationContext,
+        query: str = Option(
+            str,
+            "Enter the query of the Yu-Gi-Oh! card you're searching for",
+        ),
+    ) -> None:
+        """Search for Yu-Gi-Oh! cards by query."""
+        cards = await self.__get_queried_yugioh_card(query)
+        embeds = []
+
+        """ if cards["data"] is None:
+            await ctx.respond(f"Query `{query}` is not found.")
+        return """
+
+        await ctx.respond(f"Returning named search result for query `{query}`")
+        for data_number in range(len(cards["data"])):
+            embeds.append(self.__build_card_embed(cards, data_number))  # noqa: PERF401
 
         paginator = Paginator(pages=embeds)
         await paginator.respond(ctx.interaction, ephemeral=True)
